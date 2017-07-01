@@ -12,48 +12,45 @@ var count;
 var limit;
 var n;
 // initial game setup
-function cards(){
-inquirer.prompt([{
-          name: "name",
-          message: "Hello, what is your name?"
-     }, {
-          type: "password",
-          message: "Please set your password",
-          name: "password"
-     }, {
-          type: "confirm",
-          message: "Are you sure:",
-          name: "confirm",
-          default: true
-     }, {
-          name: "commad",
-          type: "list",
-          message: "What would you like to do today?",
-          choices: ["Create Basic Flashcards", "Create ClozeCards", "Study my basic flashcards", "Study my ClozeCards", "Quit"]
-     }
-
-]).then(function(userResponse) {
-
-     if (userResponse.commad === "Quit") {
-          console.log("user Quit");
-     } else {
-          switch (userResponse.commad) {
-               case "Create Basic Flashcards":
-                    getInfo();
-                    break;
-
-               case "Study my basic flashcards":
-                    basicQuiz(0);
-                    break;
-
+function cards() {
+     inquirer.prompt([{
+               name: "command",
+               type: "list",
+               message: "What would you like to do today?",
+               choices: ["Create Basic Flashcards", "Create ClozeCards", "Study my basic flashcards", "Study my ClozeCards", "Quit"]
           }
-     }
+
+     ]).then(function(userResponse) {
+
+          if (userResponse.command === "Quit") {
+               console.log("user Quit");
+          } else {
+               switch (userResponse.command) {
+                    case "Create Basic Flashcards":
+                         getInfo('basiclog.txt');
+                         break;
+
+                    case "Study my basic flashcards":
+                         basicQuiz(0, 'basiclog.txt');
+                         break;
+
+                    case "Create ClozeCards":
+                         getInfo('clozeLog.txt');
+                         break;
+
+                    case "Study my ClozeCards":
+                         basicQuiz(0, 'clozeLog.txt');
+                         break;
 
 
-});
+               }
+          }
+
+
+     });
 }
 // get info function that collects data
-function getInfo(basicCard) {
+function getInfo(log) {
 
      var front;
      var back;
@@ -62,11 +59,11 @@ function getInfo(basicCard) {
 
 
      if (count === 0) {
-          limitPrompt();
+          limitPrompt(log);
      }
      // sets limit on how many flashcards user will create in this session
 
-     function limitPrompt() {
+     function limitPrompt(log) {
 
           inquirer.prompt([{
                type: "input",
@@ -77,13 +74,14 @@ function getInfo(basicCard) {
 
           .then(function(answers) {
                limit = parseInt(answers.limit);
-               cardData();
+               cardData(log);
           });
      }
 }
 // collects data from user 
-function cardData() {
-     inquirer.prompt([{
+function cardData(log) {
+     if (log === 'basiclog.txt') {
+          inquirer.prompt([{
 
                type: "input",
                name: "front",
@@ -93,8 +91,7 @@ function cardData() {
                name: "back",
                message: "Now enter the back of the flashcard, the answer?"
 
-          }])
-          .then(function(answers2) {
+          }]).then(function(answers2) {
                let front = answers2.front;
                let back = answers2.back;
 
@@ -106,24 +103,62 @@ function cardData() {
 
                // if count is less than limit, keep creating cards
                if (count < limit) {
-                    cardData();
+                    cardData(log);
 
                }
                // if limit has been reached, log array of flashcards to external file for later use
                else if (count == limit) {
-                    writeCards();
+                    writeCards(log);
 
 
                }
 
           });
 
+     } else {
+          inquirer.prompt([{
+
+               type: "input",
+               name: "partial",
+               message: "Please enter a statement with the most important part omitted, like so: is the chemical composition of water."
+          }, {
+               type: "input",
+               name: "cloze",
+               message: "Now enter the omitted part, like so: Water"
+
+          }]).then(function(answers2) {
+               let partial = answers2.partial;
+               let cloze = answers2.cloze;
+
+               // creates flashcard wirh user inputs, then pushes new card to array
+               // increments count by one every time card is created
+               let newCard = new BasicCard(answers2.partial, answers2.cloze);
+               simpleLibrary.push(newCard);
+               count++;
+
+               // if count is less than limit, keep creating cards
+               if (count < limit) {
+                    cardData(log);
+
+               }
+               // if limit has been reached, log array of flashcards to external file for later use
+               else if (count == limit) {
+                    writeCards(log);
+
+
+               }
+
+          });
+
+
+     }
+
 }
 
-function writeCards() {
+function writeCards(log) {
 
      simpleLibrary = JSON.stringify(simpleLibrary);
-     fs.appendFile("./log.txt", simpleLibrary, function(err) {
+     fs.writeFile(log, simpleLibrary, function(err) {
           // If the code experiences any errors it will log the error to the console.
           if (err) {
                return console.log(err);
@@ -134,11 +169,11 @@ function writeCards() {
      });
 }
 
-function readCard() {
+function readCard(log) {
      let basicCardArr = [];
 
      // Otherwise, it will print: "log.txt was updated!"
-     fs.readFile("./log.txt", "utf8", function(error, data) {
+     fs.readFile(log, "utf8", function(error, data) {
 
           // If the code experiences any errors it will log the error to the console.
           if (error) {
@@ -157,25 +192,26 @@ function readCard() {
 }
 
 function lastCard(wrongAnswers, correctAnswers, j) {
-     if ((wrongAnswers || correctAnswers >= j) || (wrongAnswers + correctAnswers >= j)) {
+     
+     if (wrongAnswers + correctAnswers >= j) {
 
-          console.log('Here\'s your results: ');
-          console.log('correct: ' + correct);
-          console.log('wrong: ' + wrong);
+          console.log('\n\n\n\nHere\'s your results: ');
+          console.log('correct: ' + correctAnswers);
+          console.log('wrong: ' + wrongAnswers +"\n\n\n\n");
           correctAnswers = 0;
           wrongAnswers = 0;
-          flashcards();
+          cards();
      }
 
 };
 
 
-function basicQuiz(n) {
+function basicQuiz(n, log) {
      var gameAnswer;
      var gameQuestion;
      var gameCard;
 
-     fs.readFile("./log.txt", "utf8", function(error, data) {
+     fs.readFile(log, "utf8", function(error, data) {
 
           let jsonData = JSON.parse(data);
           j = jsonData.length;
@@ -188,6 +224,10 @@ function basicQuiz(n) {
                     gameQuestion = gameCard.front;
                     gameAnswer = gameCard.back.toLowerCase();
 
+               } else {
+                    gameCard = new ClozeCard(jsonData[n].partial, jsonData[n].cloze);
+                    gameQuestion = gameCard.partial;
+                    gameAnswer = gameCard.cloze.toLowerCase();
                }
                inquirer.prompt([{
                     name: "question",
@@ -206,20 +246,23 @@ function basicQuiz(n) {
                          console.log("correct");
                          correctAnswers++;
                          n++;
-                         lastCard();
-                         basicQuiz(n);
+                         lastCard(wrongAnswers, correctAnswers, j);
+                         basicQuiz(n, log);
 
                     } else {
                          gameCard.showCorrectAnswer();
                          wrongAnswers++;
                          n++;
-                         lastCard();
-                         basicQuiz(n);
+                         lastCard(wrongAnswers, correctAnswers, j);
+                         basicQuiz(n, log);
                     }
 
                });
-
-          };
+          }
      });
+
+
 };
+
+
 cards();
