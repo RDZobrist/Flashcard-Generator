@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 [{"front":"4","back":"4"},{"front":"4","back":"4"},{"front":"4","back":"4"},{"front":"4","back":"4"}]
+=======
+[][][{"front":"sss","back":"ddd"},{"front":"fff","back":"ggg"},{"front":"hhh","back":"jjj"}][{"front":"r","back":"r"},{"front":"t","back":"y"},{"front":"h","back":"j"}]
+>>>>>>> master
